@@ -9,6 +9,9 @@ import type {
 } from 'n8n-workflow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import README from '../README.md?raw';
+import pkg from '../package.json';
+
 import type { SealKeeper as SealKeeperNode } from '../nodes/SealKeeper/SealKeeper.node';
 import {
 	FIXTURE_AGENT,
@@ -412,5 +415,39 @@ describe('the key copy', () => {
 		vi.setSystemTime((PINNED + 300) * 1000);
 		await execute(server, [lookUpItem('alice/fixture')]);
 		expect(server.of(KEYS_URL)).toHaveLength(2);
+	});
+});
+
+describe('the README example workflow', () => {
+	const workflowOf = () => {
+		const block = README.split('## Example workflow')[1]?.match(/```json\n([\s\S]*?)\n```/)?.[1];
+		return JSON.parse(block ?? 'null') as {
+			nodes: { name: string; type: string; typeVersion: number; parameters: Params }[];
+			connections: Record<string, { main: { node: string }[][] }>;
+		};
+	};
+
+	it('uses this node with values its parameters take', () => {
+		const { nodes } = workflowOf();
+		const ours = nodes.filter((n) => n.type === `${pkg.name}.${node.description.name}`);
+		expect(ours).toHaveLength(1);
+		const [check] = ours;
+		expect(check.typeVersion).toBe(node.description.version);
+		for (const [name, value] of Object.entries(check.parameters)) {
+			const property = node.description.properties.find((p) => p.name === name);
+			expect(property, name).toBeDefined();
+			const values = property?.options?.map((o) => ('value' in o ? o.value : null));
+			if (values) expect(values, name).toContain(value);
+		}
+		expect(check.parameters.operation).toBe('check');
+	});
+
+	it('wires Pass to the call and Block to its own node', () => {
+		const { nodes, connections } = workflowOf();
+		const check = nodes.find((n) => n.type.endsWith(`.${node.description.name}`));
+		const [pass, block] = connections[check?.name ?? ''].main;
+		const typeOf = (name: string | undefined) => nodes.find((n) => n.name === name)?.type;
+		expect(typeOf(pass[0]?.node)).toBe('@n8n/n8n-nodes-langchain.mcpClient');
+		expect(typeOf(block[0]?.node)).toBe('n8n-nodes-base.noOp');
 	});
 });

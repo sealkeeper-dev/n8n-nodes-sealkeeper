@@ -114,6 +114,103 @@ A pass needs a current, valid SEAL of the kind at bronze or above. For a card or
 
 A pass says `sealed`, or the code **Allow Unsealed** let through. Check stops the workflow only for a parameter error, such as a **Kind** that is not agent or service. With **On Error** set to continue, that item goes to Block as `error`.
 
+## Example workflow
+
+Copy this workflow and paste it onto an empty n8n canvas. It checks the MCP server above, searches it on Pass and ends on Block. Select **Execute workflow** to run it.
+
+```json
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "check",
+        "target": "https://stoop-mcp-server.stoop.workers.dev/mcp",
+        "kind": "service"
+      },
+      "name": "Check the MCP server",
+      "type": "n8n-nodes-sealkeeper.sealKeeper",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "serverTransport": "httpStreamable",
+        "endpointUrl": "https://stoop-mcp-server.stoop.workers.dev/mcp",
+        "authentication": "none",
+        "tool": {
+          "__rl": true,
+          "mode": "id",
+          "value": "service_search"
+        },
+        "inputMode": "json",
+        "jsonInput": "{\n  \"query\": \"need a plumber for a leak\",\n  \"location\": \"Miami, FL\"\n}"
+      },
+      "name": "Search for a plumber",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        460,
+        -100
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Blocked",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        460,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Check the MCP server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check the MCP server": {
+      "main": [
+        [
+          {
+            "node": "Search for a plumber",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+```
+
 ## As an AI agent tool
 
 Add SealKeeper as a tool of an AI Agent node and select the star at the end of **Target**, so the model sets it. As a tool, Check answers every decision as one item, with `passed` true or false.
