@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-sealkeeper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Look up an AI agent or service on SealKeeper, verify its SEAL and route a workflow on it.",
   "license": "MIT",
   "homepage": "https://sealkeeper.run/docs/n8n",
